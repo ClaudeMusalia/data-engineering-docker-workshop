@@ -3,6 +3,7 @@
 
 
 import pandas as pd
+import click
 from sqlalchemy import create_engine
 from tqdm.auto import tqdm
 
@@ -32,23 +33,28 @@ parse_dates = [
     "tpep_dropoff_datetime"
 ]
 
-def run():
-    pg_user = "root"
-    pg_pass = "root"
-    pg_host = "localhost"
-    pg_port = 5432
-    pg_db = "ny_taxi"
-
-    year = 2021
-    month = 1
-
-    target_table = "yellow_taxi_data"
-
-    chunksize = 100000
-
-    prefix = 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/'
-    url = f'{prefix}/yellow_tripdata_{year}-{month:02d}.csv.gz'
-    engine = create_engine('postgresql://root:root@localhost:5432/ny_taxi')
+@click.command()
+@click.option('--pg-user', default='root', help='PostgreSQL username')
+@click.option('--pg-pass', default='root', help='PostgreSQL password')
+@click.option('--pg-host', default='localhost', help='PostgreSQL host')
+@click.option('--pg-port', default=5432, type=int, help='PostgreSQL port')
+@click.option('--pg-db', default='ny_taxi', help='PostgreSQL database name')
+@click.option('--year', default=2021, type=int, help='Year of data to ingest')
+@click.option('--month', default=1, type=int, help='Month of data to ingest (1-12)')
+@click.option('--table-name', default='yellow_taxi_data', help='Target table name')
+@click.option('--chunksize', default=100000, type=int, help='Chunk size for reading CSV')
+@click.option('--url', default=None, help='Custom URL to CSV file (if not specified, uses NYC TLC data URL)')
+def run(pg_user, pg_pass, pg_host, pg_port, pg_db, year, month, table_name, chunksize, url):
+    """Ingest NYC taxi data into PostgreSQL database."""
+    # Generate URL if not provided
+    if url is None:
+        prefix = 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/'
+        url = f'{prefix}/yellow_tripdata_{year}-{month:02d}.csv.gz'
+    
+    click.echo(f"Ingesting data from: {url}")
+    click.echo(f"Target table: {table_name}")
+    
+    engine = create_engine(f'postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}')
 
 #Ingesting data in chunks since we cannot take the whole dataset at once. We will do batches and use an iterator for that. 
     df_iter = pd.read_csv(
@@ -66,16 +72,16 @@ def run():
         if first:
             # Create table schema (no data)
             df_chunk.head(0).to_sql(
-                name="target_table",
+                name=table_name,
                 con=engine,
                 if_exists="replace"
             )
             first = False
-            print("Table created")
+            click.echo("Table created successfully")
 
         # Insert chunk
         df_chunk.to_sql(
-            name="target_table",
+            name=table_name,
             con=engine,
             if_exists="append"
         )

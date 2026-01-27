@@ -1,0 +1,4 @@
+Ingesting data from: https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow//yellow_tripdata_2021-01.csv.gz
+Target table: yellow_taxi_trips_2021_1
+✓ Successfully connected to PostgreSQL
+Table created successfully
