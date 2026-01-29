@@ -15,8 +15,13 @@ COPY "pyproject.toml" "uv.lock" ".python-version" ./
 # Install dependencies from lock file (ensures reproducible builds)
 RUN uv sync --locked
 
-# Copy application code
-COPY pipeline.py pipeline.py
+# Copy ingestion script
+COPY pipeline/Ingest_data.py ./pipeline/
 
 # Set entry point
-ENTRYPOINT ["python", "pipeline.py"]
+ENTRYPOINT ["python", "pipeline/Ingest_data.py"]
+
+# uv sync --locked installs exact versions from uv.lock for reproducibility 
+# Dependencies (pandas, sqlalchemy, psycopg2) are already in pyproject.toml
+# Multi-stage build pattern copies uv from official image
+# Copying dependency files before code improves Docker layer caching
