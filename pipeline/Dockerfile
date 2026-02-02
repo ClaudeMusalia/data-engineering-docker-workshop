@@ -16,10 +16,10 @@ COPY "pyproject.toml" "uv.lock" ".python-version" ./
 RUN uv sync --locked
 
 # Copy ingestion script
-COPY pipeline/Ingest_data.py ./pipeline/
+COPY Ingest_data.py ./
 
 # Set entry point
-ENTRYPOINT ["python", "pipeline/Ingest_data.py"]
+ENTRYPOINT ["python", "Ingest_data.py"]
 
 # uv sync --locked installs exact versions from uv.lock for reproducibility 
 # Dependencies (pandas, sqlalchemy, psycopg2) are already in pyproject.toml
