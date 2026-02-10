@@ -1,0 +1,81 @@
+# Data Pipeline with API → Python → Database
+
+id: 03_getting_started_data_pipeline
+namespace: zoomcamp
+
+#Define customizable input for column selection.
+inputs:
+  - id: columns_to_keep
+    type: ARRAY                # A list of values.
+    itemType: STRING           # Each item in the list is a string
+    defaults:                  # Default columns ["brand", "price"]. Flexibility: can change which columns to process without modifying code.
+      - brand
+      - price
+
+tasks:
+# downloads data from a public API and saves it as a file. Output: Raw JSON file stored in outputs.extract.uri
+  - id: extract             
+    type: io.kestra.plugin.core.http.Download
+    uri: https://dummyjson.com/products       #DummyJSON (mock data API for testing). Endpoint: /products - Returns sample product data
+
+#Filters and processes the raw data using python.
+  - id: transform
+    type: io.kestra.plugin.scripts.python.Script
+    containerImage: python:3.11-alpine
+    inputFiles:                              # Copies downloaded file as data.json into container
+      data.json: "{{outputs.extract.uri}}"   # Reference to previous tasks output. 
+    outputFiles:                             # Saves all JSON files from container back to Kestra
+      - "*.json"
+
+# Passes input array as an environment variable. Python can access via os.getenv("COLUMNS_TO_KEEP").
+    env:
+      COLUMNS_TO_KEEP: "{{inputs.columns_to_keep}}"
+    script: |
+      import json
+      import os
+
+      columns_to_keep_str = os.getenv("COLUMNS_TO_KEEP")   # Get columns from environment variable
+      columns_to_keep = json.loads(columns_to_keep_str)
+
+      with open("data.json", "r") as file:                 # load downloaded data.
+          data = json.load(file)
+
+      filtered_data = [                                    # Filter data to keep only specified columns.
+          {column: product.get(column, "N/A") for column in columns_to_keep}
+          for product in data["products"]
+      ]
+
+      with open("products.json", "w") as file:             # Save filtered data in new json file.
+          json.dump(filtered_data, file, indent=4)
+
+# Runs SQL queries on the transformed data using DuckDB.
+  - id: query
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    inputFiles:                                 # Get transformed JSON file from previous task. Makes it available at {{workingDir}}/products.json in DuckDB
+      products.json: "{{outputs.transform.outputFiles['products.json']}}"
+    sql: |
+      INSTALL json;
+      LOAD json;
+      SELECT brand, round(avg(price), 2) as avg_price
+      FROM read_json_auto('{{workingDir}}/products.json')
+      GROUP BY brand
+      ORDER BY avg_price DESC;
+    fetchType: STORE                    # STORE: Saves query results as workflow output. 
+
+
+    # API Download → Python Transformation → DuckDB Query → Results Storage
+    #    ↓               ↓                   ↓
+    # Raw JSON    Filtered Columns    Aggregated Stats
+
+
+
+    
+# Key transformation steps:
+
+# Parse input: JSON string → Python list
+
+# Read data: Load downloaded JSON
+
+# Filter columns: For each product, keep only brand and price
+
+# Write output: Save as new JSON file with pretty formatting
