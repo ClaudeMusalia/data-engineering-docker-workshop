@@ -1,0 +1,43 @@
+ # This is a Kestra workflow configuration file (YAML format) that sets up key-value 
+ # storage for Google Cloud Platform (GCP) configuration values.
+
+
+
+tasks:
+  - id: gcp_project_id     #Unique identifier for this flow
+    type: io.kestra.plugin.core.kv.Set    #Groups related flows together in the "zoomcamp" namespace
+    key: GCP_PROJECT_ID      #in the key values (KV) store.
+    kvType: STRING
+    value: kestra-sandbox # TODO replace with your project id
+
+ #stores the GCP region/location.
+  - id: gcp_location    
+    type: io.kestra.plugin.core.kv.Set
+    key: GCP_LOCATION
+    kvType: STRING
+    value: europe-west2  #london region, choose a region closest to you. 
+
+ # Stores the name for a GCS bucket.
+  - id: gcp_bucket_name
+    type: io.kestra.plugin.core.kv.Set
+    key: GCP_BUCKET_NAME
+    kvType: STRING
+    value: your-name-kestra # TODO make sure it's globally unique!
+
+ # Stores the name for a Bigquery dataset.
+  - id: gcp_dataset
+    type: io.kestra.plugin.core.kv.Set
+    key: GCP_DATASET
+    kvType: STRING
+    value: zoomcamp
+
+
+# This flow acts as a configuration setup for a GCP integration. Instead of hardcoding these values throughout multiple workflows, 
+# it stores them centrally in Kestra's key-value store. Other flows can then reference these values using the keys (e.g., {{ kv('GCP_PROJECT_ID') }}), making the configuration:
+
+# Reusable across multiple flows
+# Easy to update in one place
+# More maintainable
+
+# You would need to replace the placeholder values (kestra-sandbox, your-name-kestra) with your actual GCP project details before running this flow.
+
